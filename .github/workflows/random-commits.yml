@@ -1,0 +1,62 @@
+name: 30 Rock Commits
+
+on:
+  schedule:
+    - cron: '0 9,21 * * *'  # Twice daily at 09:00 and 21:00 UTC
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  thirtyrock-commits:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      GIT_USER_NAME: "ljharnack"
+      GIT_USER_EMAIL: "ljharnack1@gmail.com"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Git global config
+        run: |
+          git config --global user.name "$GIT_USER_NAME"
+          git config --global user.email "$GIT_USER_EMAIL"
+
+      - name: Generate random commits with 30 Rock quotes
+        run: |
+          NUM_COMMITS=$(( ( RANDOM % 100 ) + 1 ))  # 1-100 commits
+          echo "Generating $NUM_COMMITS commits..."
+
+          QUOTES_FILE="30rock_quotes.txt"
+
+          if [ ! -f "$QUOTES_FILE" ]; then
+            echo "No quotes file found! Exiting."
+            exit 1
+          fi
+
+          TOTAL_QUOTES=$(wc -l < "$QUOTES_FILE")
+
+          for i in $(seq 1 $NUM_COMMITS)
+          do
+            RANDOM_LINE=$(( ( RANDOM % TOTAL_QUOTES ) + 1 ))
+            QUOTE=$(sed "${RANDOM_LINE}q;d" "$QUOTES_FILE")
+
+            echo "Commit #$i with quote: $QUOTE"
+            echo "30 Rock update at $(date)" >> update-log.txt
+            git add update-log.txt
+            git commit -m "$QUOTE"
+
+            SHORT_DELAY=$(( RANDOM % 31 ))
+            echo "Sleeping $SHORT_DELAY seconds before next commit..."
+            sleep $SHORT_DELAY
+          done
+
+      - name: Push commits
+        run: |
+          git push
